@@ -84,15 +84,7 @@ function connect()
 		//Play it
 		removeVideoForStream(event.stream);
 	};
-	
-	ws.onopen = function(){
-		console.log("opened");
-		
-		navigator.mediaDevices.getUserMedia({
-			audio: true,
-			video:  videoResolution
-		})
-		.then(function(stream){	
+    var callback = function(stream){
 			var prev = 0;
 			console.debug("getUserMedia sucess",stream);
 			//Play it
@@ -101,9 +93,7 @@ function connect()
 			//Add stream to peer connection
 			pc.addStream(stream);
 			//Create new offer
-			return pc.createOffer(stream);
-		})
-		.then(function(offer){
+			pc.createOffer(stream).then(function(offer){
 			console.debug("createOffer sucess",offer);
 			//We have sdp
 			sdp = offer.sdp;
@@ -113,13 +103,28 @@ function connect()
 			//Create room
 			ws.send(JSON.stringify({
 				cmd		: "OFFER",
+                user: 'someuser',
 				offer		: sdp
 			}));
-		})
-		.catch(function(error){
+		});
+        }
+    var error_callback = function(error){
 			console.error("Error",error);
 			alert(error);
-		});
+		};
+    var mediaConfig ={
+                audio: true,
+                video:  true
+            }
+	ws.onopen = function(){
+		console.log("opened");
+        if(navigator.mediaDevices && navigator.mediaDevices.hasOwnProperty('getUserMedia')) {
+            navigator.mediaDevices.getUserMedia(mediaConfig).then(callback);
+        }else {
+            console.log('getUserMedia');
+            navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+            navigator.getUserMedia(mediaConfig, callback, error_callback);
+        }
 	};
 	
 	ws.onmessage = function(event){
